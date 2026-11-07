@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Protects the production branch locally: refs/heads/<PRODUCTION_BRANCH> moves only through the release script, which sets
+# FACTORY_ALLOW_PRODUCTION_UPDATE=1 and runs in the MAIN checkout. A commit, reset, rebase, branch -f or update-ref that would
+# move or delete it from anywhere else (an agent in a worktree, a mistyped command) is refused, whichever command attempts it.
+# The branch name is read from git config (factory.productionBranch, default main). Installed into the shared git directory
+# by install-hooks.sh, outside every working tree, so an agent cannot edit the guard it runs under.
+[ "${1:-}" = "prepared" ] || exit 0
+prod=$(git config --get factory.productionBranch 2>/dev/null || echo main)
+is_zero() { case "$1" in '' | *[!0]*) return 1 ;; *) return 0 ;; esac; }
+current=$(git rev-parse -q --verify "refs/heads/$prod" 2>/dev/null) || current=""
+common=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null) || common=""
+while read -r old new ref; do
+  [ "$ref" = "refs/heads/$prod" ] || continue
+  # not a move: the branch keeps the commit it has (pack-refs, gc)
+  if ! is_zero "$new" && [ -n "$current" ] && [ "$new" = "$current" ]; then continue; fi
+  if is_zero "$new" && ! is_zero "$old" && [ "$old" = "$current" ] && [ -n "$common" ] && grep -qxF "$old refs/heads/$prod" "$common/packed-refs" 2>/dev/null; then continue; fi
+  if [ "${FACTORY_ALLOW_PRODUCTION_UPDATE:-}" = 1 ] && [ "$(git rev-parse --git-dir)" = "$(git rev-parse --git-common-dir)" ]; then continue; fi
+  echo "refused: $prod moves only through the release script (FACTORY_ALLOW_PRODUCTION_UPDATE=1 in the main checkout)" >&2
+  exit 1
+done
+exit 0

@@ -1,0 +1,6 @@
+# Handover <date>
+Running: <lanes, daemons, machines>      Last release: <story, sha, time>      Spend today: <$>
+Parked stories (why, what to do): ...
+Waiting on the owner (what, since when): ...
+Watch next: <things likely to need attention, with the command to check>
+Not proven yet: <pipeline changes made but not yet exercised by a real delivery>

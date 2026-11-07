@@ -1,0 +1,57 @@
+# factory.conf - the ONLY file that adapts the factory to a project, a stack and a machine. Sourced by every script.
+# Commands are shell strings run with `sh -c` inside the story's worktree (or the main checkout where stated) with the
+# stack contract in the environment: FACTORY_STORY, FACTORY_WORKTREE, FACTORY_COMMIT, FACTORY_STACK_NAME, FACTORY_PORT_BASE.
+# Nothing in this file may contain a secret: keep tokens in the environment or a secret store.
+
+PROJECT_NAME=myproject
+REPO=/absolute/path/to/the/main/checkout        # set by `factory init`
+# WORKTREES=                                    # default: <repo-parent>/<repo-name>-wt
+INTEGRATION_BRANCH=staging                      # stories merge here, only after the critical tests passed on that exact commit
+PRODUCTION_BRANCH=main                          # set equal to INTEGRATION_BRANCH if there is a single environment
+REMOTE=origin
+PLAN_DIR=                                       # e.g. $REPO/plan : makes unknown story ids fail fast and enables plan checks
+AUTO_RELEASE=1                                  # 0 = deliveries stop at the integration branch and a human releases
+
+# ---- agent
+AGENT_ADAPTER=claude                            # claude | codex | generic (then set AGENT_CMD)
+AGENT_MODEL=                                    # empty = the CLI default; pick a cheaper model for routine stories if you wish
+AGENT_EFFORT=medium
+AGENT_FIX_EFFORT=medium
+COMMIT_TRAILERS=                                # appended to every commit the agents make, \n separated
+DAILY_BUDGET_USD=0                              # 0 = no cap
+NOTIFY_CMD=                                     # e.g. 'curl -s -d' style webhook wrapper script: called with one message argument
+
+# ---- stack (examples; see references/11-adapting-to-stack.md for Rust, Node, Python, Go, Rails, mobile)
+STACK_ENGINE=none                               # docker enables container throttling and leftover-stack cleanup
+STACK_MEM_GB=4                                  # memory of one full stack; used to size parallel lanes
+CMD_STACK_UP=
+CMD_STACK_DOWN=                                 # must WIPE the stack's data (volumes), not just stop it
+CMD_STACK_RESET=                                # wipe + start: a fresh database for the critical run
+CMD_GATE_FAST=                                  # format, lint, unit tests of what changed, plan/trace checks
+CMD_GATE_FULL=                                  # everything except the end-to-end suite
+CMD_E2E_TARGETED=                               # a few specs, for fix runs
+CMD_E2E_CRITICAL=                               # runs the critical tests of the commit in $1 with NO retries, writes the verdict
+E2E_VERDICT_FILE=e2e/critical-result.json       # relative to the verification worktree; see scripts/verdict-from-*.py
+CMD_E2E_MATRIX=                                 # the FULL matrix (all browsers/devices/languages, visual); run on a schedule, never gates a release
+CMD_DEMO_REFRESH=                               # in the main checkout, after a delivery
+CMD_POST_RELEASE_CHECK=                         # smoke test of production after a release (a green deploy only proves the script ran)
+CMD_DEPLOY_STATUS=
+CMD_STORY_EXISTS=
+CMD_AGENT_AUTH_CHECK=
+CMD_CACHE_TRIM=                                 # safe-while-building trim of build caches (the janitor runs it when disk is low)
+
+# ---- verification (single machine by default)
+VERIFY_MODE=local                               # remote = a verifier machine runs the critical tests (references/10-multi-machine.md)
+
+# ---- machine protection (defaults are the values that worked; tune after measuring)
+HEAVY_LOCK=/tmp/software-factory-heavy.lock     # share it between every project on this machine
+MAX_FIX_RUNS=2
+PARK_AFTER_MIN=180
+HEAVY_LIMIT_MIN=150
+HEAVY_TARGETED_LIMIT_MIN=45
+RELEASE_STALL_MIN=180
+DISK_PATH=/
+DISK_LOW_GB=40
+DISK_CRITICAL_GB=10
+PING_HOSTS="api.anthropic.com github.com"
+PROTECT_PATHS_NOTE="Never edit the git hooks, the agent settings, the CI workflow or anything under .git/."

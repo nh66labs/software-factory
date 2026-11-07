@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+# heavy <command...>: one heavy job at a time on this machine.
+#
+# The full gate, the end-to-end suites and the critical run each start a whole stack. Several together starve the machine
+# until tests time out, and a timeout looks exactly like a product bug: a release once failed 15 critical tests only
+# because two other suites were running beside it. This wrapper waits for its turn, runs the command with
+# FACTORY_HEAVY_HELD=1 (so a nested heavy command does not wait for itself) and gives the turn back, also when the
+# command fails or is killed.
+#
+#   HEAVY_LOCK                lock directory (machine-wide; share it between all projects on a machine)
+#   FACTORY_HEAVY_PRIORITY=1  deliveries and releases: go before every ordinary waiter, so a release is never stuck
+#                             behind a story's long gate. A priority waiter leaves a marker named after its pid.
+#
+# A holder that died is taken over; a lock directory created and never filled is taken over after a minute. The lock
+# records `pid` and `what` so the supervisor can see who holds it and for how long.
+set -u
+[ $# -gt 0 ] || { echo "usage: heavy <command...>" >&2; exit 2; }
+if [ -n "${FACTORY_HEAVY_HELD:-}" ]; then exec "$@"; fi
+LOCK=${HEAVY_LOCK:-/tmp/software-factory-heavy.lock}
+PRIO="$LOCK.prio.$$"
+if [ -n "${FACTORY_HEAVY_PRIORITY:-}" ]; then : > "$PRIO"; trap 'rm -f "$PRIO"' EXIT; fi
+other_priority_waiting() {
+  local f
+  for f in "$LOCK".prio.*; do
+    [ -e "$f" ] || continue
+    [ "$f" = "$PRIO" ] && continue
+    if kill -0 "${f##*.}" 2>/dev/null; then return 0; else rm -f "$f"; fi
+  done
+  return 1
+}
+waited=0
+while { [ -z "${FACTORY_HEAVY_PRIORITY:-}" ] && other_priority_waiting; } || ! mkdir "$LOCK" 2>/dev/null; do
+  holder=$(cat "$LOCK/pid" 2>/dev/null || true)
+  if [ -n "$holder" ] && ! kill -0 "$holder" 2>/dev/null; then rm -rf "$LOCK"; continue; fi
+  if [ -z "$holder" ] && [ -d "$LOCK" ] && [ -z "$(find "$LOCK" -mmin -1 2>/dev/null)" ]; then rm -rf "$LOCK"; continue; fi
+  if [ $((waited % 60)) -eq 0 ]; then
+    echo "heavy: waiting for the machine (held by pid ${holder:-?}: $(cat "$LOCK/what" 2>/dev/null)); waited ${waited}s" >&2
+  fi
+  sleep 5; waited=$((waited + 5))
+done
+echo $$ > "$LOCK/pid"
+echo "$* ($(pwd))" > "$LOCK/what"
+date +%s > "$LOCK/since"
+trap 'rm -rf "$LOCK"; rm -f "$PRIO"' EXIT
+trap 'exit 143' TERM INT HUP
+FACTORY_HEAVY_HELD=1 "$@"

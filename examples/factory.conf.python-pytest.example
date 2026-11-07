@@ -1,0 +1,13 @@
+# Example factory.conf for a Python service without containers (single environment, tests run against a local database).
+PROJECT_NAME=api
+REPO=/srv/api
+INTEGRATION_BRANCH=main
+PRODUCTION_BRANCH=main        # single environment: delivery still proves the commit before it lands
+STACK_ENGINE=none
+CMD_STACK_RESET='dropdb --if-exists "$FACTORY_STACK_NAME"; createdb "$FACTORY_STACK_NAME"; DATABASE_URL="postgresql:///$FACTORY_STACK_NAME" alembic upgrade head'
+CMD_STACK_DOWN='dropdb --if-exists "$FACTORY_STACK_NAME"'
+CMD_GATE_FAST='ruff check . && pytest -q -x --lf'
+CMD_GATE_FULL='ruff check . && mypy . && pytest -q --cov --cov-fail-under=85'
+CMD_E2E_CRITICAL='DATABASE_URL="postgresql:///$FACTORY_STACK_NAME" pytest -m critical -p no:randomly --junitxml=report.xml; python3 -I .factory/bin/verdict-from-junit.py report.xml "$1" critical-result.json'
+E2E_VERDICT_FILE=critical-result.json
+AUTO_RELEASE=1

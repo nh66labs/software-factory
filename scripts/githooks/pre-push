@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Runs the fast gate before every push, so a branch that fails it never reaches the remote. The gate command is
+# factory.gateFast in git config (set from CMD_GATE_FAST by install-hooks.sh). It goes through the heavy lock so a push
+# never runs beside other heavy jobs. Bypassing it (--no-verify) is denied to agents by their settings.
+cmd=$(git config --get factory.gateFast 2>/dev/null)
+[ -n "$cmd" ] || exit 0
+cd "$(git rev-parse --show-toplevel)" || exit 1
+heavy=$(git config --get factory.heavy 2>/dev/null)
+if [ -n "$heavy" ]; then exec "$heavy" sh -c "$cmd"; fi
+exec sh -c "$cmd"

@@ -1,0 +1,39 @@
+# GitHub Actions example (adapt to your CI). Every push to the production branch deploys that commit - but only if the
+# critical-test pass of EXACTLY that commit is recorded. The deploy job runs on a runner that can reach the target
+# (self-hosted label, VPN/tailnet, or a cloud role); keep secrets in the platform's secret store, never in the repository.
+name: Deploy
+
+on:
+  push:
+    branches: [main]            # = PRODUCTION_BRANCH
+  workflow_dispatch:
+    inputs:
+      allow_unverified:
+        description: "Deploy a commit that has no recorded critical E2E pass. Give the reason (printed in the run); leave empty for the normal guard."
+        required: false
+        default: ""
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, deploy]          # label of the runner that can reach the target
+    timeout-minutes: 90
+    environment:
+      name: production
+      url: https://example.invalid          # the product URL
+    steps:
+      - uses: actions/checkout@v4           # pin to a full commit sha in real use
+        with:
+          fetch-depth: 0
+      - name: Require the recorded critical E2E pass
+        env:
+          ALLOW_UNVERIFIED: ${{ inputs.allow_unverified }}
+        run: deploy/check-e2e-marker.sh "$GITHUB_SHA" "$ALLOW_UNVERIFIED"   # copy check-e2e-marker.sh to deploy/
+      - name: Deploy
+        run: deploy/deploy.sh               # your deploy script: build/pull images, migrate forward-only, restart, health check

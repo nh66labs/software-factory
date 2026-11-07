@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+# factory: the one command an operator (or the coordinating agent) uses.
+#   factory init <repo> [--name N] [--update]   scaffold <repo>/.factory (config, prompts, queues, bin); --update refreshes bin only
+#   factory doctor                              check the machine and configuration, size the parallelism
+#   factory start [--no-keepawake]              start supervisor + janitor (+ lanes from queues/*.txt via the supervisor)
+#   factory stop [--all]                        stop the daemons; --all also lane drivers and agent runs
+#   factory status | health [--fix]             the health report (see health.sh)
+#   factory queue <lane> <story-id>...          append stories to a lane's queue (creates the lane)
+#   factory park|unpark <story>                 take a story out of / back into the flow
+#   factory retry <story>                       clear a story's counters and unpark it
+#   factory logs [n]                            last n lines of progress.log and supervisor.log
+#   factory usage [hours]                       agent cost and rate
+#   factory deliver <story>                     deliver a finished story by hand (same path as the driver)
+#   factory release [--check-only]              release the integration branch by hand
+#   factory matrix                              run the scheduled full test matrix on the integration branch (CMD_E2E_MATRIX)
+# Run it from the project's .factory/bin.
+set -u
+HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+SKILL_ROOT=$(cd "$HERE/.." && pwd)
+cmd=${1:-help}; [ $# -gt 0 ] && shift
+
+case "$cmd" in
+  init)
+    repo=${1:?usage: factory init <repo> [--name N] [--update]}; shift
+    name=""; update=0
+    while [ $# -gt 0 ]; do case "$1" in --name) name=$2; shift ;; --update) update=1 ;; esac; shift; done
+    repo=$(cd "$repo" && pwd) || exit 2
+    [ -d "$repo/.git" ] || [ -f "$repo/.git" ] || { echo "factory init: $repo is not a git repository" >&2; exit 2; }
+    [ -n "$name" ] || name=$(basename "$repo" | tr 'A-Z' 'a-z' | tr -c 'a-z0-9\n' '-')
+    f="$repo/.factory"; mkdir -p "$f/bin" "$f/prompts" "$f/queues" "$f/state"
+    # scripts are copied, not linked: the project carries the exact version it was run with
+    rm -rf "$f/bin"; mkdir -p "$f/bin"
+    cp -R "$HERE"/. "$f/bin/"
+    chmod +x "$f/bin/"* "$f/bin/adapters/"* 2>/dev/null
+    if [ "$update" = 0 ]; then
+      [ -f "$f/factory.conf" ] || sed -e "s#^REPO=.*#REPO=$repo#" -e "s#^PROJECT_NAME=.*#PROJECT_NAME=$name#" "$SKILL_ROOT/templates/factory.conf.example" > "$f/factory.conf"
+      for p in "$SKILL_ROOT"/templates/prompts/*.md; do [ -f "$f/prompts/$(basename "$p")" ] || cp "$p" "$f/prompts/"; done
+      exclude="$repo/.git/info/exclude"; [ -f "$repo/.git" ] || { mkdir -p "$(dirname "$exclude")"; grep -qxF '.factory/state/' "$exclude" 2>/dev/null || echo '.factory/state/' >> "$exclude"; }
+    fi
+    echo "factory: $f ready. Next: edit $f/factory.conf (see references/11-adapting-to-stack.md), then: $f/bin/factory doctor"
+    ;;
+  doctor)   exec "$HERE/preflight.sh" "$@" ;;
+  health)   exec "$HERE/health.sh" "$@" ;;
+  status)   exec "$HERE/health.sh" --short "$@" ;;
+  usage)    exec "$HERE/usage.sh" "$@" ;;
+  deliver)  exec "$HERE/deliver.sh" "$@" ;;
+  release)  exec "$HERE/release.sh" "$@" ;;
+  matrix)   exec "$HERE/matrix-check.sh" "$@" ;;
+  start)
+    . "$HERE/lib/common.sh"
+    keep=1; [ "${1:-}" = "--no-keepawake" ] && keep=0
+    [ $keep = 1 ] && ! pid_running lane keepawake && { nohup "$HERE/keepawake.sh" > /dev/null 2>&1 & echo $! > "$(pid_file lane keepawake)"; }
+    for d in supervisor janitor; do
+      if pid_running lane "$d"; then echo "$d already running"; else (cd "$HERE" && nohup "./$d.sh" > "$STATE_DIR/$d.out" 2>&1 &); echo "$d started"; fi
+    done
+    [ -n "${FACTORY_VERIFIER:-}" ] && ! pid_running lane verifier && (cd "$HERE" && nohup ./verifier-daemon.sh > "$STATE_DIR/verifier.out" 2>&1 &)   # set FACTORY_VERIFIER=1 on the verification machine
+    echo "lanes in $FACTORY_DIR/queues start within 2 minutes (supervisor)"
+    ;;
+  stop)
+    . "$HERE/lib/common.sh"
+    for d in supervisor janitor keepawake verifier; do p=$(pid_of lane "$d"); pid_alive "$p" && { kill_tree "$p" TERM; echo "$d stopped"; }; rm -f "$(pid_file lane "$d")"; done
+    if [ "${1:-}" = "--all" ]; then
+      for k in lane build fix deliver; do list_runs "$k" | while read -r n p; do kill_tree "$p" TERM; echo "$k $n stopped"; done; done
+    fi
+    ;;
+  queue)
+    . "$HERE/lib/common.sh"
+    lane=${1:?usage: factory queue <lane> <story-id>...}; shift
+    mkdir -p "$FACTORY_DIR/queues"; for s in "$@"; do echo "$s" >> "$FACTORY_DIR/queues/$lane.txt"; done
+    rm -f "$STATE_DIR/lane-$lane.done" "$STATE_DIR/lane-$lane.stopped"; echo "queued $# stories in lane $lane"
+    ;;
+  park)   . "$HERE/lib/common.sh"; : > "$STATE_DIR/.parked.${1:?story}"; log_event "$1" PARKED "by hand"; echo "parked $1" ;;
+  unpark) . "$HERE/lib/common.sh"; rm -f "$STATE_DIR/.parked.${1:?story}" "$STATE_DIR/.fixing.$1"; log_event "$1" UNPARKED "by hand"; echo "unparked $1 (the supervisor re-delivers it, or restart its lane)" ;;
+  retry)  . "$HERE/lib/common.sh"; s=${1:?story}; rm -f "$STATE_DIR/.parked.$s" "$STATE_DIR/.fixing.$s" "$STATE_DIR/.redeliver.$s"; log_event "$s" RETRY-RESET "by hand"; echo "reset $s" ;;
+  logs)   . "$HERE/lib/common.sh"; n=${1:-30}; echo "--- progress.log"; tail -n "$n" "$LOG" 2>/dev/null; echo "--- supervisor.log"; tail -n "$n" "$SUPLOG" 2>/dev/null ;;
+  help|-h|--help|"") awk 'NR==1{next} /^#/{sub(/^# ?/,""); print; next} {exit}' "$0" ;;
+  *) echo "factory: unknown command $cmd (try: factory help)" >&2; exit 2 ;;
+esac

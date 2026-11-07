@@ -1,0 +1,13 @@
+### ST-AREA-001 · <title: a user flow a person can complete>
+- Persona: <who does this>
+- Depends on: <ids, or none>
+- Covers: <inventory feature ids>
+- Screens: <screen / route / control ids>
+- Flow outline: <5-10 lines: the main path in plain words>
+- Alternate paths: <edit, cancel, bulk, import ... one line each>
+- Error paths: <validation, permission denied, conflict, offline ... one line each>
+- Permissions: <role -> can/cannot>
+- Languages/layout notes: <anything locale-specific: formats, RTL, copy>
+- Acceptance:
+  - AC1 <observable result that a test can assert; give concrete numbers where money/dates are involved>
+  - AC2 <...>
