@@ -14,6 +14,7 @@ _fac_here() { cd "$(dirname "${BASH_SOURCE[1]:-${BASH_SOURCE[0]}}")" && pwd; }
 FACTORY_BIN=${FACTORY_BIN:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}
 FACTORY_DIR=${FACTORY_DIR:-$(cd "$FACTORY_BIN/.." && pwd)}
 FACTORY_CONF=${FACTORY_CONF:-$FACTORY_DIR/factory.conf}
+export FACTORY_BIN FACTORY_DIR   # factory.conf commands reference the scripts as "$FACTORY_BIN/..." (a fresh worktree does not contain .factory)
 
 # ---------------------------------------------------------------- defaults (overridden by factory.conf)
 PROJECT_NAME=project

@@ -44,7 +44,7 @@ CMD_STACK_DOWN='docker compose -p "$FACTORY_STACK_NAME" down -v --remove-orphans
 CMD_STACK_RESET='docker compose -p "$FACTORY_STACK_NAME" down -v --remove-orphans && docker compose -p "$FACTORY_STACK_NAME" up -d --wait && ./scripts/migrate-and-seed'
 CMD_GATE_FAST='./run lint && ./run typecheck && ./run test --changed'
 CMD_GATE_FULL='./run lint && ./run typecheck && ./run test --coverage && ./run build && ./run audit'
-CMD_E2E_CRITICAL='./run e2e --grep @critical --retries=0 --reporter=json > e2e/report.json; python3 -I .factory/bin/verdict-from-playwright.py e2e/report.json "$1" e2e/critical-result.json'
+CMD_E2E_CRITICAL='./run e2e --grep @critical --retries=0 --reporter=json > e2e/report.json; python3 -I "$FACTORY_BIN"/verdict-from-playwright.py e2e/report.json "$1" e2e/critical-result.json'
 E2E_VERDICT_FILE=e2e/critical-result.json
 ```
 Compose file: take ports from `${FACTORY_PORT_BASE}` + offsets; name volumes per project; mount a shared READ-ONLY dependency cache.
@@ -52,7 +52,7 @@ Compose file: take ports from `${FACTORY_PORT_BASE}` + offsets; name volumes per
 **Python service, pytest**
 ```
 CMD_GATE_FULL='ruff check . && mypy . && pytest -q --cov --cov-fail-under=85'
-CMD_E2E_CRITICAL='pytest -m critical -p no:randomly --maxfail=0 --junitxml=report.xml; python3 -I .factory/bin/verdict-from-junit.py report.xml "$1" critical-result.json'
+CMD_E2E_CRITICAL='pytest -m critical -p no:randomly --maxfail=0 --junitxml=report.xml; python3 -I "$FACTORY_BIN"/verdict-from-junit.py report.xml "$1" critical-result.json'
 ```
 **Rust workspace**: `cargo fmt --check && cargo clippy -D warnings && cargo nextest run`; mount a persistent build-output volume
 shared by story worktrees (cold compiles are slow) and trim it with `CMD_CACHE_TRIM` (incremental data and files untouched for a

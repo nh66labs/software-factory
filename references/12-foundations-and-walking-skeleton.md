@@ -20,7 +20,8 @@ mistake found here costs one story, not a night of parallel runs.
 9. **CI and deploy**: workflow with the deploy guard, deploy script, rollback command, post-release smoke check, environments.
 10. **Seed data**: a realistic shared sample dataset so figures in tests match what the owner sees in the demo.
 11. **Observability**: structured logs without personal data, error tracking, uptime check, version endpoint (the smoke check uses it).
-12. **`factory.conf`** filled; `factory doctor` clean; `scripts/selftest.sh` green on this machine.
+12. **`factory.conf`** filled; `factory doctor` clean; `scripts/selftest.sh` green on this machine; ONE real headless agent run succeeds
+    here (proves permissions, trust and the adapter); a formatter ignore list covering guard-rail and generated files.
 
 ## 12.2 Choosing the walking skeleton
 The smallest slice that touches every part of the pipeline for real:

@@ -139,3 +139,28 @@ its own worktrees.
 
 **F5. Approval chores for the owner** -> batch questions; coordinator approves flows/TIPs after independent review; the
 owner-only list is short and explicit.
+
+## G. Found in the first use on a new project (a small static site)
+**G1. The host blocked unattended agent runs.** The environment's safety classifier refused to launch a headless agent in
+bypass-permissions mode ("creates an unsafe agent") even for a read-only review -> the factory cannot start lanes until the
+human grants an explicit permission rule (or an alternative mode is chosen) -> ask for it in discovery (section E) and test one
+headless run in phase 3 BEFORE planning on lanes; fallback: the coordinator builds the walking skeleton interactively through the
+same gates and `factory deliver` (the delivery line does not care who wrote the commit).
+
+**G2. `critical-e2e` passed the commit appended to the command string, but configs used `$1`.** The critical command now receives
+the commit as `$1` and `$FACTORY_COMMIT`; scripts are referenced as `"$FACTORY_BIN/..."` because a fresh verification worktree
+does not contain untracked project files (commit `.factory` or use the exported variable).
+
+**G3. A formatter rewrote guard-rail files** (`.claude/settings.json`, workflows, rules file) in a story worktree, which is a
+rails edit. -> the formatter's ignore list names every guard-rail and generated file from day one; `./run fmt` is never run
+blindly in a story that must not touch them.
+
+**G4. Empty directories are not in git**, so a fresh worktree lacked `src/styles` and files written into it failed -> a builder
+creates directories it needs (`mkdir -p`), prompts say so.
+
+**G5. A skeleton with navigation to sections that later stories add fails the link check.** -> a shrinking pending list
+(`scripts/pending-anchors.json`): listed anchors may be missing until their story removes them, and a listed anchor that exists
+fails the check, so the list can only shrink. General pattern: a ratchet for "temporarily allowed" gaps.
+
+**G6. A real defect was found by the acceptance test, not by eye**: horizontal overflow at 375 px caused by a grid track growing
+to its content. The test was kept; the CSS was fixed (`minmax(0, 1fr)`). Phone-width checks belong in the first story.

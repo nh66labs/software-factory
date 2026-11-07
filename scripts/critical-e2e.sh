@@ -39,7 +39,7 @@ if [ -n "$CMD_STACK_RESET" ] && ! run_cmd "$CMD_STACK_RESET" "$WT"; then echo "c
 VERDICT="$WT/$E2E_VERDICT_FILE"
 rm -f "$VERDICT"
 CODE=0
-FACTORY_COMMIT=$SHA run_cmd "$CMD_E2E_CRITICAL $SHA" "$WT" || CODE=$?
+(cd "$WT" && FACTORY_COMMIT=$SHA sh -c "$CMD_E2E_CRITICAL" factory-critical "$SHA") || CODE=$?   # the commit is $1 (and $FACTORY_COMMIT)
 [ -f "$VERDICT" ] || { echo "critical-e2e: the run left no verdict ($VERDICT)" >&2; exit 2; }
 cp "$VERDICT" "$STATE_DIR/verdicts/$SHA.json" 2>/dev/null || true
 python3 -I "$FACTORY_BIN/verdict-check.py" "$VERDICT" "$SHA" "$CODE"

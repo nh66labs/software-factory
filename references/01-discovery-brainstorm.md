@@ -77,6 +77,7 @@ Legend: **M** mandatory (blocks the factory), **R** recommended (a waiver is rec
 | Spend policy: daily budget cap, alert threshold | `DAILY_BUDGET_USD` | M |
 | Model/effort policy: which model for authoring, routine builds, fixes, reviews | cost vs quality | R |
 | Alert channel: how the factory reaches the human (push, chat, email) and the quiet hours | `NOTIFY_CMD` | M |
+| Permission to run unattended agents: the host environment may refuse headless runs in permissive mode; the human must grant an explicit rule, or choose another mode; test ONE headless run now | lanes cannot start without it | M |
 | Coordinator cadence: health check every 30 minutes; reporting style (short, answer first) | operating contract | M |
 | Time zone and working hours of the owner | when to expect answers; when decisions must be pre-made | R |
 | Who accepts stories/slices and how (live demo URL, checklist) | acceptance is human | M |

@@ -72,7 +72,7 @@ sed -i.bak -e "s#^AGENT_ADAPTER=.*#AGENT_ADAPTER=generic#" \
   -e "s#^CMD_GATE_FULL=.*#CMD_GATE_FULL='sh gate.sh'#" \
   -e "s#^CMD_GATE_FAST=.*#CMD_GATE_FAST='sh gate.sh'#" \
   -e "s#^CMD_STACK_RESET=.*#CMD_STACK_RESET='true'#" \
-  -e "s#^CMD_E2E_CRITICAL=.*#CMD_E2E_CRITICAL='sh e2e-critical.sh'#" \
+  -e "s#^CMD_E2E_CRITICAL=.*#CMD_E2E_CRITICAL='sh e2e-critical.sh "\$1"'#" \
   -e "s#^E2E_VERDICT_FILE=.*#E2E_VERDICT_FILE=verdict.json#" "$F/factory.conf" && rm -f "$F/factory.conf.bak"
 printf 'AGENT_CMD="sh %s/stub-agent.sh"\nINFRA_RETRY_SLEEP=1\nDEFER_POLL=2\n' "$T" >> "$F/factory.conf"
 # the stub agent: reads the prompt on stdin; builds, or repairs, depending on which prompt it got
@@ -228,7 +228,7 @@ git clone -q "$T/origin.git" "$T/verifier" && (cd "$T/verifier" && git config us
 bash "$SRC/factory" init "$T/verifier" --name toyverifier >/dev/null
 V="$T/verifier/.factory"
 sed -i.bak -e "s#^HEAVY_LOCK=.*#HEAVY_LOCK=$T/heavy-v.lock#" -e "s#^CMD_STACK_RESET=.*#CMD_STACK_RESET='true'#" \
-  -e "s#^CMD_E2E_CRITICAL=.*#CMD_E2E_CRITICAL='sh e2e-critical.sh'#" -e "s#^E2E_VERDICT_FILE=.*#E2E_VERDICT_FILE=verdict.json#" "$V/factory.conf" && rm -f "$V/factory.conf.bak"
+  -e "s#^CMD_E2E_CRITICAL=.*#CMD_E2E_CRITICAL='sh e2e-critical.sh "\$1"'#" -e "s#^E2E_VERDICT_FILE=.*#E2E_VERDICT_FILE=verdict.json#" "$V/factory.conf" && rm -f "$V/factory.conf.bak"
 ( cd "$V/bin" && FACTORY_VERIFIER=1 ./verifier-daemon.sh > "$T/verifier.out" 2>&1 ) &
 verifier_pid=$!
 ( cd "$F/bin" && ./drive.sh --lane remote ST-R-1 ST-R-2 > "$T/lane-remote.out" 2>&1 )
