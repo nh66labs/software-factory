@@ -100,7 +100,7 @@ while :; do
       case "$line" in
         DONE*)
           if deliver "$story"; then
-            log_event "$story" DONE "$line"; progress=1; break
+            log_event "$story" DONE "${line#DONE }"; progress=1; break
           fi
           log_event "$story" REBASE-FIX "delivery stopped (conflict or failing critical test); fixing in its worktree"
           ok=0; tries=0
@@ -112,7 +112,7 @@ while :; do
             if [[ "$fixed" == DONE* ]] && deliver "$story"; then ok=1; break; fi
             log_event "$story" REBASE-FIX "attempt $tries did not deliver: $fixed"; sleep 120
           done
-          if [ $ok = 1 ]; then log_event "$story" DONE "$line (after fix run)"; progress=1; break; fi
+          if [ $ok = 1 ]; then log_event "$story" DONE "${line#DONE } (after fix run)"; progress=1; break; fi
           log_event "$story" DELIVERY-FAILED "$line / fix: ${fixed:-none} (see runs/$story.merge)"; break ;;
         "BLOCKED deps"*)
           log_event "$story" DEFERRED "$line"; deferred+=("$story"); break ;;

@@ -1,10 +1,16 @@
 #!/usr/bin/env bash
-# Runs the fast gate before every push, so a branch that fails it never reaches the remote. The gate command is
-# factory.gateFast in git config (set from CMD_GATE_FAST by install-hooks.sh). It goes through the heavy lock so a push
-# never runs beside other heavy jobs. Bypassing it (--no-verify) is denied to agents by their settings.
+# Runs the fast gate before a push of CODE, so a branch that fails it never reaches the remote. Pushes that carry only tags or
+# factory refs (the recorded critical pass, candidates, rejections) are not code and skip the gate: they are pushed before the
+# merge, from a checkout that may still be at the previous commit. The gate command is factory.gateFast in git config (set from
+# CMD_GATE_FAST by install-hooks.sh); it goes through the heavy lock. Bypassing it (--no-verify) is denied to agents.
+code=0
+while read -r _local_ref _local_sha remote_ref _remote_sha; do
+  case "$remote_ref" in refs/tags/*|refs/factory/*) ;; *) code=1 ;; esac
+done
+[ "$code" = 1 ] || exit 0
 cmd=$(git config --get factory.gateFast 2>/dev/null)
 [ -n "$cmd" ] || exit 0
 cd "$(git rev-parse --show-toplevel)" || exit 1
 heavy=$(git config --get factory.heavy 2>/dev/null)
-if [ -n "$heavy" ]; then exec "$heavy" sh -c "$cmd"; fi
-exec sh -c "$cmd"
+if [ -n "$heavy" ]; then exec "$heavy" sh -c "$cmd" < /dev/null; fi
+exec sh -c "$cmd" < /dev/null

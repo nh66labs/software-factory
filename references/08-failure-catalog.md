@@ -194,3 +194,8 @@ showed a 56-year release age -> never `|| echo 0` after `grep -c`; parse state f
 
 **G14. A one-epic plan put every story into one lane** -> `queue.py` deals stories by dependency affinity when there are fewer
 areas than lanes; health ignores empty queue files.
+
+**G15. The coordinator's own commit made the integration branch red**, and a refused push was ignored. Later a delivery's tag
+push ran the pre-push gate on that red state and failed -> the coordinator's commits go through the same fast gate (never commit
+around it); a refused push is a stop signal, never noise; the pre-push hook gates code pushes only (tag and factory-ref pushes
+are not code and happen before the merge).
