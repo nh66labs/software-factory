@@ -26,10 +26,11 @@ fi
 "$FACTORY_BIN/record-critical.sh" "$SHA" || CODE=$?
 if [ "$CODE" -ne 0 ]; then echo "release: NOT released. The critical tests did not pass (exit $CODE); nothing was merged or pushed." >&2; exit "$CODE"; fi
 [ "$(git rev-parse "$INTEGRATION_BRANCH")" = "$SHA" ] || { echo "release: $INTEGRATION_BRANCH moved during the test run; run it again" >&2; exit 2; }
-START_BRANCH=$(git branch --show-current)
-git switch -q "$PRODUCTION_BRANCH" || exit 2
-trap 'git switch -q "$START_BRANCH"' EXIT
-FACTORY_ALLOW_PRODUCTION_UPDATE=1 git merge --ff-only "$INTEGRATION_BRANCH" || exit 2
+# Move the production ref WITHOUT switching the main checkout: a switch would briefly put the older production version of every
+# tracked file (the factory's own scripts, its config, the queues) under the running daemons and lanes. `git fetch . A:B` is a
+# fast-forward-only update of a branch that is not checked out.
+[ "$(git branch --show-current)" != "$PRODUCTION_BRANCH" ] || { echo "release: the main checkout must not have $PRODUCTION_BRANCH checked out" >&2; exit 2; }
+FACTORY_ALLOW_PRODUCTION_UPDATE=1 git fetch -q . "$INTEGRATION_BRANCH:$PRODUCTION_BRANCH" || { echo "release: $PRODUCTION_BRANCH cannot fast-forward to $INTEGRATION_BRANCH" >&2; exit 2; }
 git push "$REMOTE" "$PRODUCTION_BRANCH" || { echo "release: push of $PRODUCTION_BRANCH refused" >&2; exit 2; }
 echo "Released $(git log -1 --format='%h %s')"
 if [ -n "$CMD_POST_RELEASE_CHECK" ]; then

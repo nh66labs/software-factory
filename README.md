@@ -50,6 +50,14 @@ release before building; park instead of blocking; infrastructure faults are not
 file, never by name; every pipeline change is exercised before it is relied on; the human is asked only about money, accounts,
 contracts, legal text, devices and acceptance.
 
-## Status
-Scripts are tested by `selftest.sh` on macOS and Ubuntu. The knowledge base reflects real incidents. See `references/10-multi-machine.md`
-for scaling out and `references/08-failure-catalog.md` for what to expect.
+## Status: validated on a real project
+- `scripts/selftest.sh`: 44 checks, macOS and Ubuntu 24.04 (two lanes, conflicts, failing critical tests, heavy lock priority,
+  guards, parking, remote verifier, scheduling, notifications, regressions from real use).
+- A real project (a website rebuild, 13 stories, Claude Code headless, least privilege) ran end to end with this skill:
+  discovery -> research -> plan -> independent plan review (found 3 blocking errors) -> plan fix -> foundations ->
+  `factory agent-smoke` READY -> two unattended lanes delivered 10 stories with no pipeline fault (about $27 of agent time) ->
+  critical tests on every exact commit -> release with the production guard -> post-release check (pass and fail cases) ->
+  a real fix run resolving a real delivery conflict. Every defect that run found is fixed and catalogued
+  (`references/08-failure-catalog.md`, section G).
+- Environment-specific and not exercised there: a hosted deploy workflow (the project had no hosted repository yet), the Codex
+  adapter, the remote verifier across real machines, parking and re-delivery with real agents (covered by the self-test).

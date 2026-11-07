@@ -127,7 +127,11 @@ round() {
   for q in "$FACTORY_DIR"/queues/*.txt; do
     [ -e "$q" ] || continue
     lane=$(basename "$q" .txt)
-    [ -f "$STATE_DIR/lane-$lane.done" ] && [ "$q" -nt "$STATE_DIR/lane-$lane.done" ] && rm -f "$STATE_DIR/lane-$lane.done"   # queue edited: run again
+    # queue CONTENT changed since the lane finished: run again (content, not mtime: a checkout rewrites mtimes without edits)
+    if [ -f "$STATE_DIR/lane-$lane.done" ] && [ "$(cksum < "$q")" != "$(cat "$STATE_DIR/lane-$lane.done" 2>/dev/null)" ]; then
+      [ -s "$STATE_DIR/lane-$lane.done" ] && rm -f "$STATE_DIR/lane-$lane.done"
+      [ -f "$STATE_DIR/lane-$lane.done" ] && cksum < "$q" > "$STATE_DIR/lane-$lane.done"   # old empty marker: adopt the current content
+    fi
     pid_running lane "$lane" && continue
     [ -f "$STATE_DIR/lane-$lane.done" ] && continue
     [ -f "$STATE_DIR/lane-$lane.stopped" ] && continue

@@ -125,7 +125,7 @@ while :; do
     rm -f "$STATE_DIR/.run.$story"
   done
   if [ ${#deferred[@]} -eq 0 ]; then
-    log_event lane QUEUE-EMPTY "${lane:-}"; [ -n "$lane" ] && : > "$STATE_DIR/lane-$lane.done"; exit 0
+    log_event lane QUEUE-EMPTY "${lane:-}"; [ -n "$lane" ] && { q="$FACTORY_DIR/queues/$lane.txt"; if [ -f "$q" ]; then cksum < "$q"; fi > "$STATE_DIR/lane-$lane.done"; }; exit 0
   fi
   if [ $progress -eq 0 ]; then
     # nothing could be built this pass. If other lanes or a delivery are still working, the missing stories may arrive:
@@ -133,7 +133,7 @@ while :; do
     if others_active && [ $waited -lt $((DEFER_WAIT_MIN * 60)) ]; then
       sleep "$DEFER_POLL"; waited=$((waited + DEFER_POLL)); queue=("${deferred[@]}"); deferred=(); continue
     fi
-    log_event lane STUCK "deferred: ${deferred[*]}"; [ -n "$lane" ] && : > "$STATE_DIR/lane-$lane.done"; exit 5
+    log_event lane STUCK "deferred: ${deferred[*]}"; [ -n "$lane" ] && { q="$FACTORY_DIR/queues/$lane.txt"; if [ -f "$q" ]; then cksum < "$q"; fi > "$STATE_DIR/lane-$lane.done"; }; exit 5
   fi
   waited=0; queue=("${deferred[@]}"); deferred=(); progress=0
 done

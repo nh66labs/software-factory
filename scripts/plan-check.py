@@ -49,7 +49,7 @@ for path in sorted(glob.glob(os.path.join(args.plan, "**", "*.md"), recursive=Tr
             s["deps"] = [x.strip() for x in line.split(":", 1)[1].split(",") if x.strip() and x.strip().lower() not in ("none", "-", "nothing")]
             mode = None
         elif low.startswith("- covers:"):
-            s["covers"] = [x.strip() for x in line.split(":", 1)[1].split(",") if x.strip()]
+            s["covers"] = [x.strip() for x in line.split(":", 1)[1].split(",") if x.strip() and x.strip().lower() not in ("none", "-", "n/a")]
             mode = None
         elif low.startswith("- acceptance:"):
             mode = "ac"

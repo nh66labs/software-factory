@@ -199,3 +199,11 @@ areas than lanes; health ignores empty queue files.
 push ran the pre-push gate on that red state and failed -> the coordinator's commits go through the same fast gate (never commit
 around it); a refused push is a stop signal, never noise; the pre-push hook gates code pushes only (tag and factory-ref pushes
 are not code and happen before the merge).
+
+**G16. The release switched the shared main checkout to the production branch and back**, rewriting tracked files under the
+running daemons (for a while the factory's own scripts and config were the older production versions) and touching the queue
+files, which the supervisor read as "edited" and restarted finished lanes -> the release moves the production ref without a
+checkout (`git fetch . integration:production`, fast-forward only); lane restarts compare queue CONTENT, not mtimes.
+
+**G17. A stand-in deployment that served the previous commit made the post-release check fail after 18 minutes** - correctly:
+the check compares the served version with the released commit. Keep that check strict; point it at the real deployment.
