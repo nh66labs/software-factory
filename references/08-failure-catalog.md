@@ -164,3 +164,33 @@ fails the check, so the list can only shrink. General pattern: a ratchet for "te
 
 **G6. A real defect was found by the acceptance test, not by eye**: horizontal overflow at 375 px caused by a grid track growing
 to its content. The test was kept; the CSS was fixed (`minmax(0, 1fr)`). Phone-width checks belong in the first story.
+
+**G7. The plan was built from an AI summary of the reference page**, which turned three pricing tabs into two, missed a sticky
+floating button and missed three video cards. A string-presence check could not see structure. The independent plan review found
+all three -> build the inventory from the RAW evidence (markup, DOM, screenshots), never from a model's summary; the independent
+plan review is mandatory, run as a headless reviewer (`templates/prompts/review-plan.md`) and applied by a different author run
+(`plan-fix.md`) that verifies each finding against the raw evidence.
+
+**G8. Headless runs in a new project had no permissions at all, and no deny list.** Claude Code ignores a project's
+`.claude/settings.json` (allow AND deny) until the trust dialog is accepted interactively. -> the adapter passes the settings
+explicitly (`--settings`), so allow/deny rules and hooks apply anyway; `factory agent-smoke` proves it with a deny test.
+
+**G9. Agents could not edit files in their own worktree**: the worktrees live beside the repository and the agent may only edit
+inside its start folder -> the adapter adds the worktrees folder (`--add-dir`).
+
+**G10. The host refused to launch agents in bypass-permissions mode and refused edits that broaden the agent's own allow list.**
+-> least privilege is the default (`acceptEdits` + an allow list that the human approves in phase 3); the allow list is written
+once, by the human or with explicit approval, never widened by the coordinator on its own.
+
+**G11. Two worktrees corrupted a shared dependency volume** (`npm ci` deletes node_modules first; two installs at once collide)
+-> one dependency volume per lockfile hash and a host-side install lock; the coordinator never runs container commands beside a
+live lane without the same lock.
+
+**G12. `count=$(grep -c ... || echo 0)` produced "0\n0"** (grep -c prints 0 AND exits 1), corrupting a timestamp file: health
+showed a 56-year release age -> never `|| echo 0` after `grep -c`; parse state files defensively.
+
+**G13. Daemons started from a tool shell kept its stdin open, so the caller hung** -> every background start redirects
+`< /dev/null`.
+
+**G14. A one-epic plan put every story into one lane** -> `queue.py` deals stories by dependency affinity when there are fewer
+areas than lanes; health ignores empty queue files.

@@ -23,15 +23,17 @@ these; a missing one is a `blocked` item in the brief and `AUTO_RELEASE=0` until
    shared git directory, outside every working tree, by the human) refuses any other move of the production branch, whichever
    command or tool attempts it. Agents are denied editing `.git/`, the hooks and the installer, so they cannot weaken the guard.
 2. **Pre-push gate**: the fast gate runs before any push (`pre-push` hook), through the heavy lock.
-3. **Agent permission settings** (`templates/agent-settings/claude-settings.example.json`): deny the destructive and the
-   guard-bypassing forms (force push, `--no-verify`, branch -f on production, `git reset`, writes under `.git`), protect
-   the rails files with a PreToolUse hook, and make sure every command the prompts rely on is on the allow list or has an
-   allowed equivalent. A command on the **ask** list is a trap for a headless run: it cannot answer, so the run fails or
-   reports BLOCKED. Audit the prompts against the lists once (a dry run of each command class).
-4. **Trust**: headless runs ignore a project's permission settings (allow lists included) in a directory whose trust dialog was
-   never accepted. Open the agent interactively once in the checkout the runs start from and accept; do this on every machine.
-5. **Run on a dedicated machine or VM** holding no credentials you would mind losing, in a permissive mode; the rails above
-   (deny rules, hooks, branch protection) are what keeps that safe.
+3. **Agent permission settings** (`templates/agent-settings/claude-settings.example.json`), LEAST PRIVILEGE: headless runs use
+   `acceptEdits` plus the project's allow list (the commands the prompts need, nothing more); deny rules for destructive and
+   guard-bypassing forms (push, force, `--no-verify`, branch -f, reset/restore/clean, `git -C`, writes under `.git`, the rails
+   files); a PreToolUse hook protecting the rails. A command on the **ask** list is a trap for a headless run: it cannot answer.
+   The human approves this file once in phase 3; the coordinator never widens it on its own (hosts may refuse that as
+   self-modification, rightly).
+4. **Settings are passed explicitly** (`--settings`) because a project's settings are ignored, allow AND deny, in a folder whose
+   trust dialog was never accepted; the worktrees folder is added (`--add-dir`) because agents may only edit inside allowed
+   folders. `factory agent-smoke` proves all of it with one real run: worktree, edit, commit, the fast gate, a denied command
+   refused, protected branches unmoved.
+5. **Bypass mode is opt-in**, only on a dedicated machine/VM with nothing to lose, and some hosts refuse to launch it.
 6. **Secrets**: never in the repository, prompts, logs or commit messages. CI/deploy read them from the platform's secret
    store. Agents get the minimum (a scoped token for the one repository). Test environments use sandbox credentials.
 7. **No mutation of shared systems by tests**: non-production email/SMS/webhooks go to sinks; payment/bank integrations use

@@ -49,12 +49,23 @@ while remaining:
     remaining = [s for s in remaining if s not in done]
 
 lanes = [[] for _ in range(max(1, args.lanes))]
-epic_lane = {}
-for s in topo:
-    e = stories[s]["epic"]
-    if e not in epic_lane:
-        epic_lane[e] = min(range(len(lanes)), key=lambda i: len(lanes[i]))
-    lanes[epic_lane[e]].append(s)
+epics = set(stories[s]["epic"] for s in topo)
+if len(epics) >= len(lanes):
+    epic_lane = {}
+    for s in topo:
+        e = stories[s]["epic"]
+        if e not in epic_lane:
+            epic_lane[e] = min(range(len(lanes)), key=lambda i: len(lanes[i]))
+        lanes[epic_lane[e]].append(s)
+else:
+    # fewer areas than lanes: a story goes to the lane that already holds one of its dependencies (no cross-lane wait),
+    # otherwise to the shortest lane
+    where = {}
+    for s in topo:
+        dep_lanes = [where[d] for d in stories[s]["deps"] if d in where]
+        i = dep_lanes[-1] if dep_lanes else min(range(len(lanes)), key=lambda k: len(lanes[k]))
+        lanes[i].append(s)
+        where[s] = i
 for i, lane in enumerate(lanes, 1):
     print("lane-%d (%d stories): %s" % (i, len(lane), " ".join(lane[:12]) + (" ..." if len(lane) > 12 else "")))
     if args.out:

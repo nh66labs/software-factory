@@ -58,6 +58,12 @@ images or brand assets; personal data encountered is not stored. When unsure, as
 Use a clean-room split: observers write **facts** into `research/`; a different step writes **our requirements** into
 `plan/`, in our own words.
 
+## 2.3a Never plan from a summary
+Build the inventory from the RAW evidence: the markup/DOM (every element, attribute, tab, hidden panel, aria label, data
+attribute, script behaviour), screenshots at phone and desktop width, and the network log. A model's summary of a page drops
+structure (a third tab, a floating button, embedded video cards were all lost this way once). Mechanical string checks do not
+see structure either. The independent plan review (2.9) is what catches it.
+
 ## 2.4 The feature inventory
 `research/inventory.md` lists every capability of the reference product (and of the domain's mandatory rules), one per line:
 ```
@@ -104,7 +110,8 @@ to the rules (the principle, not the one-off fix). A prototype or design system,
 control ids (`data-testid` = the control id) so tests and designs stay in step.
 
 ## 2.9 Reviewing the plan (independent, before freezing)
-A fresh session that did not write the plan reviews: coverage (parity map), story sizing (one flow each), dependency sanity,
+Run it headless with `templates/prompts/review-plan.md`, then apply it with a different author run (`plan-fix.md`) that verifies every
+finding against the raw evidence and records what it applied and rejected. A fresh session that did not write the plan reviews: coverage (parity map), story sizing (one flow each), dependency sanity,
 acceptance criteria testability, missing cross-cutting stories, regulatory claims vs sources, scope rule respected, and the
 slice order. Findings are fixed; the coordinator records `Plan v1 approved (date)` in `plan/decisions.md`. After that the
 plan changes only by change request (the story's section gets a new version; agents never invent behaviour).

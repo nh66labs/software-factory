@@ -27,7 +27,9 @@ Nothing here is specific to a product, a stack or a machine; the one adapter fil
    text, physical devices, and exceptions to rules they set. Everything else: decide, record, continue.
 8. **Be honest in reports.** Say what ran and what it asserted, what is not covered, and what is unverified. Never claim
    comprehensive coverage because a suite is green. Never promise a date without a measured rate.
-9. **Nothing project- or machine-specific in the skill; no secrets anywhere in the repo.**
+9. **Least privilege for agents.** Headless runs use an allow list the human approved, settings passed explicitly, deny rules
+   proven by `factory agent-smoke`. Never widen an agent's permissions on your own; bypass mode is opt-in.
+10. **Nothing project- or machine-specific in the skill; no secrets anywhere in the repo.**
 
 ## The phases
 Work through them in order; each ends with a gate you must pass before the next. Details are in `references/`.
@@ -35,9 +37,9 @@ Work through them in order; each ends with a gate you must pass before the next.
 | # | Phase | Output | Reference |
 |---|---|---|---|
 | 0 | **Orient**: is there a plan? a repo? a farm? read the brief if one exists | decision on which phases to run | this file |
-| 1 | **Discovery brainstorm** with the human: vision, users, scope, compliance, stack, **deployment environments, accounts, budgets, machines, agent limits** | `factory-brief.md` with every mandatory item filled or explicitly waived; readiness gate green | `01-discovery-brainstorm.md` |
+| 1 | **Discovery brainstorm** with the human, and the **tier** (`13-right-sizing.md`): vision, users, scope, compliance, stack, **deployment environments, accounts, budgets, machines, agent limits** | `factory-brief.md` with every mandatory item filled or explicitly waived; readiness gate green | `01-discovery-brainstorm.md` |
 | 2 | **Research and plan** (skip if a reviewed plan exists): study reference software, reverse-engineer what is observable, build the feature inventory, map to epics/stories/slices, check mechanically, review independently | `research/` (raw sources + inventory), `plan/` (stories, dependency order), `plan-check` clean | `02-research-and-plan.md` |
-| 3 | **Foundations**: repo, rules file, stack adapter, gates, hooks, CI + deploy guard, environments, `factory init`, `factory doctor` | a repo where `gate`, the critical run and a stub-agent dry run work | `04`, `05`, `11`, `12` |
+| 3 | **Foundations**: repo, rules file, stack adapter, gates, hooks, CI + deploy guard, environments, `factory init`, `factory doctor` | a repo where `gate` and the critical run work, `factory agent-smoke` says READY (one real agent run) | `04`, `05`, `11`, `12` |
 | 4 | **Walking skeleton**: build ONE thin vertical slice through the whole lifecycle (flow, plan, tests, build, verify, release, smoke check) before scaling | a released slice; every adapter command proven | `03`, `06`, `12` |
 | 5 | **Run**: queues into lanes, supervisor + janitor, the 30-minute health loop, release announcements | releases flowing, health green | `06`, `09` |
 | 6 | **Operate and scale**: runbook, incidents, cost, parked stories, farm | stable throughput measured, not promised | `09`, `10`, `08` |
@@ -57,6 +59,10 @@ accounts and credentials, the machines available, the agent subscriptions and sp
 the acceptance owner, the alert channel). Collect them in one structured session, write `factory-brief.md` from
 `templates/brief/factory-brief.md`, and stop for the human only on what the list marks as theirs to provide.
 
+## Right-size it
+Pick the tier in `references/13-right-sizing.md` (micro, small, standard, large) and record it. A landing page does not need
+flow and TIP documents per story; a payments product needs all of them. What never shrinks is listed there.
+
 ## Phase 2: research and plan
 If the product has reference software (a competitor, an incumbent, an open-source analogue), the plan is built from evidence,
 not from memory: `references/02-research-and-plan.md` gives the study protocol (public docs, trials, API/network
@@ -72,7 +78,8 @@ Stack adapter (`factory.conf`): the gate, the critical run, stack up/down, deplo
 command and every gate has been exercised by a real story before lanes multiply the cost of a mistake.
 
 ## Phase 5-6: run and operate
-`factory start` launches the supervisor and janitor; lanes start from `queues/*.txt`. The coordinating agent runs
+Before the first lane: `factory agent-smoke` must say READY. `factory start` launches the supervisor and janitor; `factory
+schedule --install` keeps the health check running even when no session is open; lanes start from `queues/*.txt`. The coordinating agent runs
 `factory health --fix` every 30 minutes (schedule it with whatever the host agent offers), acts on anything WARN/FAIL
 immediately, and tells the human only when a release went out (what is new, where to click) or when something is broken that
 could not be fixed. Reports are short, answer first. See `references/09-operations-runbook.md`.

@@ -12,6 +12,8 @@
 #   factory usage [hours]                       agent cost and rate
 #   factory deliver <story>                     deliver a finished story by hand (same path as the driver)
 #   factory release [--check-only]              release the integration branch by hand
+#   factory agent-smoke                         ONE real tiny agent run: proves permissions, trust, deny rules, adapter (run before lanes)
+#   factory schedule [--install]               print/install the 30-minute health check (cron, launchd or systemd)
 #   factory matrix                              run the scheduled full test matrix on the integration branch (CMD_E2E_MATRIX)
 # Run it from the project's .factory/bin.
 set -u
@@ -46,14 +48,16 @@ case "$cmd" in
   deliver)  exec "$HERE/deliver.sh" "$@" ;;
   release)  exec "$HERE/release.sh" "$@" ;;
   matrix)   exec "$HERE/matrix-check.sh" "$@" ;;
+  schedule) exec "$HERE/install-schedule.sh" "${1:---print}" "${2:-}" ;;
+  agent-smoke) exec "$HERE/agent-smoke.sh" "$@" ;;
   start)
     . "$HERE/lib/common.sh"
     keep=1; [ "${1:-}" = "--no-keepawake" ] && keep=0
-    [ $keep = 1 ] && ! pid_running lane keepawake && { nohup "$HERE/keepawake.sh" > /dev/null 2>&1 & echo $! > "$(pid_file lane keepawake)"; }
+    [ $keep = 1 ] && ! pid_running lane keepawake && { nohup "$HERE/keepawake.sh" > /dev/null 2>&1 < /dev/null & echo $! > "$(pid_file lane keepawake)"; }
     for d in supervisor janitor; do
-      if pid_running lane "$d"; then echo "$d already running"; else (cd "$HERE" && nohup "./$d.sh" > "$STATE_DIR/$d.out" 2>&1 &); echo "$d started"; fi
+      if pid_running lane "$d"; then echo "$d already running"; else (cd "$HERE" && nohup "./$d.sh" > "$STATE_DIR/$d.out" 2>&1 < /dev/null &); echo "$d started"; fi
     done
-    [ -n "${FACTORY_VERIFIER:-}" ] && ! pid_running lane verifier && (cd "$HERE" && nohup ./verifier-daemon.sh > "$STATE_DIR/verifier.out" 2>&1 &)   # set FACTORY_VERIFIER=1 on the verification machine
+    [ -n "${FACTORY_VERIFIER:-}" ] && ! pid_running lane verifier && (cd "$HERE" && nohup ./verifier-daemon.sh > "$STATE_DIR/verifier.out" 2>&1 < /dev/null &)   # set FACTORY_VERIFIER=1 on the verification machine
     echo "lanes in $FACTORY_DIR/queues start within 2 minutes (supervisor)"
     ;;
   stop)

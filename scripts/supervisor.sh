@@ -91,13 +91,14 @@ round() {
     say "REDELIVER $s (attempt $((n + 1)))"
     [ "$DRY" = 1 ] && continue
     echo $((n + 1)) > "$STATE_DIR/.redeliver.$s"
-    (cd "$FACTORY_BIN" && nohup ./drive.sh "$s" > "$RUNS/drive-$s.redeliver.out" 2>&1 &)
+    (cd "$FACTORY_BIN" && nohup ./drive.sh "$s" > "$RUNS/drive-$s.redeliver.out" 2>&1 < /dev/null &)
     break
   done
   # 4. stall watchdog
   local count stamp_count stamp_time age waiting
-  count=$(grep -cE "^[^ ]+ RELEASED " "$LOG" 2>/dev/null || echo 0)
+  count=$(grep -cE "^[^ ]+ RELEASED " "$LOG" 2>/dev/null); count=${count:-0}   # grep -c prints 0 AND fails: never "|| echo 0"
   if [ -f "$STATE_DIR/.release-stamp" ]; then read -r stamp_count stamp_time < "$STATE_DIR/.release-stamp"; else stamp_count=-1; stamp_time=$(now); fi
+  case "$stamp_time" in ''|*[!0-9]*) stamp_count=-1; stamp_time=$(now) ;; esac
   if [ "$count" != "$stamp_count" ]; then echo "$count $(now)" > "$STATE_DIR/.release-stamp"; stamp_time=$(now); fi
   age=$(( ($(now) - stamp_time) / 60 )); waiting=$(unreleased_waiting | wc -l | tr -d ' ')
   if [ "$age" -ge "$RELEASE_STALL_MIN" ] && [ "$waiting" -gt 0 ] && ! delivery_active; then
@@ -105,7 +106,7 @@ round() {
     log_event lane STALL "no release for ${age}min, $waiting waiting"; notify "Factory stall: no release for ${age} min, $waiting stories waiting"
     if [ "$DRY" != 1 ]; then
       rm -f "$STATE_DIR"/.redeliver.*
-      for s in $(unreleased_waiting); do being_worked "$s" && continue; say "STALL-REDELIVER $s"; (cd "$FACTORY_BIN" && nohup ./deliver.sh "$s" > "$RUNS/drive-$s.redeliver.out" 2>&1 &); break; done
+      for s in $(unreleased_waiting); do being_worked "$s" && continue; say "STALL-REDELIVER $s"; (cd "$FACTORY_BIN" && nohup ./deliver.sh "$s" > "$RUNS/drive-$s.redeliver.out" 2>&1 < /dev/null &); break; done
     fi
   fi
   # 5. heavy watchdog
@@ -134,7 +135,7 @@ round() {
     [ -n "$ids" ] || continue
     say "LANE $lane is not running: starting it"; log_event lane LANE-START "$lane"
     # shellcheck disable=SC2086
-    [ "$DRY" = 1 ] || (cd "$FACTORY_BIN" && nohup ./drive.sh --lane "$lane" $ids > "$RUNS/lane-$lane.out" 2>&1 &)
+    [ "$DRY" = 1 ] || (cd "$FACTORY_BIN" && nohup ./drive.sh --lane "$lane" $ids > "$RUNS/lane-$lane.out" 2>&1 < /dev/null &)
   done
   # 7. a push of the integration branch that was refused (PUSH-PENDING) is retried when nothing is delivering
   if ! delivery_active && git -C "$REPO" rev-parse -q --verify "refs/remotes/$REMOTE/$INTEGRATION_BRANCH" >/dev/null 2>&1; then

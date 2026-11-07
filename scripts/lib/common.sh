@@ -109,7 +109,7 @@ notify() {  # notify "<message>": best effort, never fatal, rate-limited per mes
   key=$(printf '%s' "$msg" | cksum | cut -d' ' -f1)
   if [ -f "$STATE_DIR/.notified.$key" ] && [ -n "$(find "$STATE_DIR/.notified.$key" -mmin -60 2>/dev/null)" ]; then return 0; fi
   : > "$STATE_DIR/.notified.$key"
-  $NOTIFY_CMD "$msg" >/dev/null 2>&1 || true
+  sh -c "$NOTIFY_CMD \"\$1\"" notify "$msg" >/dev/null 2>&1 || true   # sh expands $FACTORY_BIN etc. in the configured command
 }
 
 # ---------------------------------------------------------------- portable system helpers

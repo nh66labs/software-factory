@@ -17,7 +17,7 @@ for d in supervisor janitor; do
   else
     out FAIL "$d is not running"
     if [ $FIX = 1 ]; then
-      (cd "$FACTORY_BIN" && nohup "./$d.sh" > "$STATE_DIR/$d.out" 2>&1 &); out INFO "$d restarted"
+      (cd "$FACTORY_BIN" && nohup "./$d.sh" > "$STATE_DIR/$d.out" 2>&1 < /dev/null &); out INFO "$d restarted"
     fi
   fi
 done
@@ -27,6 +27,7 @@ paused=0; for k in build fix; do for p in $(list_runs $k | awk '{print $2}'); do
 out INFO "runs: $nb building, $nf fixing, $paused paused"
 for q in "$FACTORY_DIR"/queues/*.txt; do
   [ -e "$q" ] || continue; lane=$(basename "$q" .txt)
+  grep -qv '^[[:space:]]*\(#.*\)\{0,1\}$' "$q" || continue   # an empty queue is not a lane
   if pid_running lane "$lane"; then out OK "lane $lane running"
   elif [ -f "$STATE_DIR/lane-$lane.done" ]; then out INFO "lane $lane finished its queue"
   elif [ -f "$STATE_DIR/lane-$lane.stopped" ]; then out INFO "lane $lane is stopped on purpose"
@@ -39,7 +40,7 @@ if [ -n "$rel" ]; then
   out INFO "last release: ${rel%% to production*} at $stamp"
 fi
 if [ -f "$STATE_DIR/.release-stamp" ]; then
-  read -r _c t < "$STATE_DIR/.release-stamp"; age=$(( ($(now) - t) / 60 ))
+  read -r _c t < "$STATE_DIR/.release-stamp"; case "$t" in ''|*[!0-9]*) t=$(now) ;; esac; age=$(( ($(now) - t) / 60 ))
   w=$(grep -E "^[^ ]+ (DELIVERY-FAILED|CRITICAL-E2E-FAILED) " "$LOG" 2>/dev/null | awk '{print $1}' | sort -u | while read -r s; do story_done "$s" || story_parked "$s" || echo "$s"; done | tr '\n' ' ')
   if [ "$age" -ge "$RELEASE_STALL_MIN" ] && [ -n "$w" ]; then out FAIL "no release for ${age} min while these wait: $w"; else out OK "release age ${age} min; waiting for delivery: ${w:-none}"; fi
 fi

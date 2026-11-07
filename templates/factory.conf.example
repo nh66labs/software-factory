@@ -17,9 +17,10 @@ AGENT_ADAPTER=claude                            # claude | codex | generic (then
 AGENT_MODEL=                                    # empty = the CLI default; pick a cheaper model for routine stories if you wish
 AGENT_EFFORT=medium
 AGENT_FIX_EFFORT=medium
+CLAUDE_PERMISSION_MODE=acceptEdits               # least privilege; the project's .claude/settings.json allow list governs commands
 COMMIT_TRAILERS=                                # appended to every commit the agents make, \n separated
 DAILY_BUDGET_USD=0                              # 0 = no cap
-NOTIFY_CMD=                                     # e.g. 'curl -s -d' style webhook wrapper script: called with one message argument
+NOTIFY_CMD='$FACTORY_BIN/notify.sh'             # backends by environment: NOTIFY_NTFY_TOPIC, NOTIFY_SLACK_WEBHOOK, NOTIFY_WEBHOOK, NOTIFY_MACOS=1
 
 # ---- stack (examples; see references/11-adapting-to-stack.md for Rust, Node, Python, Go, Rails, mobile)
 STACK_ENGINE=none                               # docker enables container throttling and leftover-stack cleanup

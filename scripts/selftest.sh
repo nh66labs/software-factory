@@ -238,6 +238,15 @@ check "verifier rejected the BREAK commit" grep -qE "^ST-R-2 CRITICAL-E2E-FAILED
 check "fix run repaired it and the verifier then passed" grep -qE "^ST-R-2 RELEASED " "$LOG"
 check "verifier log shows a FAIL and a PASS" sh -c "grep -q FAIL '$V/state/verifier.log' && grep -q PASS '$V/state/verifier.log'"
 
+echo "== regressions found in the first real project"
+check "release stamp holds two numbers (grep -c bug)" sh -c "awk 'NF==2 && \$1 ~ /^[0-9]+\$/ && \$2 ~ /^[0-9]+\$/ {ok=1} END{exit !ok}' '$F/state/.release-stamp'"
+python3 -I "$F/bin/queue.py" --plan "$T/proj/plan" --lanes 3 --out "$T/q3" >/dev/null
+check "fewer areas than lanes: every lane gets work" sh -c "for i in 1 2 3; do [ -s '$T/q3/lane-'\$i'.txt' ] || exit 1; done"
+printf "NOTIFY_CMD='\$FACTORY_BIN/notify.sh'\nNOTIFY_FILE=$T/notes.log\n" >> "$F/factory.conf"
+( export NOTIFY_FILE="$T/notes.log"; FACTORY_DIR="$F" bash -c ". '$F/bin/lib/common.sh'; notify 'selftest message'" )
+check "notify reaches the configured command (variables expanded)" grep -q "selftest message" "$T/notes.log"
+check "factory start returns at once (daemons detach stdin)" sh -c "cd '$F/bin' && timeout 20 ./factory start --no-keepawake >/dev/null 2>&1 < /dev/null; r=\$?; ./factory stop >/dev/null 2>&1; [ \$r -eq 0 ]"
+
 echo
 echo "selftest: $PASS passed, $FAILN failed"
 [ $FAILN -eq 0 ]
