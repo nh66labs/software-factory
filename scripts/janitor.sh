@@ -69,6 +69,8 @@ round() {
   stale_verify_stacks
 }
 if [ "${1:-}" = "--once" ]; then round; exit 0; fi
+# single instance: two copies would double every action (seen when two coordinator sessions both "restarted" it)
+other=$(pid_of lane janitor); if pid_alive "$other" && [ "$other" != "$$" ]; then echo "janitor already running (pid $other)"; exit 0; fi
 pid_register lane janitor
 trap 'pid_unregister lane janitor' EXIT
 while :; do round; sleep 120; done

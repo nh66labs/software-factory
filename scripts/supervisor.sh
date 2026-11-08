@@ -158,6 +158,8 @@ round() {
   if [ -n "$f" ] && [ "$f" -lt "$DISK_CRITICAL_GB" ]; then notify "Factory disk is critically low: ${f} GB free"; log_event lane LOW-DISK "${f} GB"; fi
 }
 if [ "${1:-}" = "--once" ]; then round; exit 0; fi
+# single instance: two copies would double every action (seen when two coordinator sessions both "restarted" it)
+other=$(pid_of lane supervisor); if pid_alive "$other" && [ "$other" != "$$" ]; then echo "supervisor already running (pid $other)"; exit 0; fi
 pid_register lane supervisor
 trap 'pid_unregister lane supervisor' EXIT
 while true; do round; sleep 120; done

@@ -4,6 +4,7 @@
 # remote: tag e2e-critical/<sha> on a pass, annotated tag refs/factory/rejected/<sha> (message = the reasons) on a failure.
 # The builders never need to reach this machine; the git remote is the only bus.
 . "$(dirname "$0")/lib/common.sh"
+other=$(pid_of lane verifier); if pid_alive "$other" && [ "$other" != "$$" ]; then echo "verifier already running (pid $other)"; exit 0; fi
 pid_register lane verifier
 cd "$REPO" || exit 2
 while :; do

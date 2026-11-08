@@ -207,3 +207,7 @@ checkout (`git fetch . integration:production`, fast-forward only); lane restart
 
 **G17. A stand-in deployment that served the previous commit made the post-release check fail after 18 minutes** - correctly:
 the check compares the served version with the released commit. Keep that check strict; point it at the real deployment.
+
+**G18. Two supervisors and two janitors ran at once** (two coordinator sessions each "restarted" a daemon they thought was
+dead), doubling pauses, re-deliveries and cleanups -> every daemon refuses to start while its registered pid is alive; exactly
+ONE coordinator session runs the health loop for a factory (a forked or second session must not schedule its own).
